@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-#troquei os '?' por 1
 df = pd.read_csv('house-votes-84.csv')
 Xf = df.iloc[:, 1:].values
 Yf = df.iloc[:, 0].values
