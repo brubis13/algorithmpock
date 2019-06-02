@@ -15,49 +15,89 @@ Yf = Yf.astype(int)
 
 for a in range(0, 434):
     for b in range(0,16):
-        if ('y' in Xf[a][b]):
-            Xf[a][b] = 1
-        elif ('n' in Xf[a][b]):
-            Xf[a][b] = -1
+        if 'y' in Xf[a][b]:
+            Xf[a][b] = 1.0
+        elif 'n' in Xf[a][b]:
+            Xf[a][b] = -1.0
+        elif '?' in Xf[a][b]:
+            Xf[a][b] = 0.0
+        #else:
+            #print('erro')
 
-learningRate = 0.01
+learningRate = 0.01 #taxa de atualizacao de pesos
 plotData = []
 pesos = np.random.rand(16, 1)
-erroClassificacao = 1 #erro de classificacao
-minErroClassificacao = 1000#minimo erro de classificacao
-interacao = 0
+minErroClassificacao = 1000 #minimo erro de classificacao
 
-while (erroClassificacao != 0 and (interacao<100)):
-    interacao += 1
-    erroClassificacao = 0
-    for i in range(0, len(Xf)):  #tamanho da minha base de dados, 0 a 434
+bolsoAccuracy = 0 ##melhor acuracia encontrada
+bolso = [] #pesos da melhor acuracia encontrada
+
+def predicao(x, pesos):
+    pred = np.dot(x, pesos)[0][0] #multiplicacao de matriz
+    return pred
+
+#atualY = labels, erro nessa funcao por causa do python 2
+def atualizar_pesos(label, prediction, atualX):
+    if label == 1 and prediction < 0:
+        return pesos + learningRate * np.transpose(atualX)
+    elif label == -1 and prediction > 0:
+        return pesos - learningRate * np.transpose(atualX)
+
+def calcular_erro(label, prediction):
+    return (label-prediction)**2
+
+def atualizar_bolso(accuracy):
+    global bolsoAccuracy
+    global bolso
+    if accuracy > bolsoAccuracy:
+        bolsoAccuracy = accuracy
+        bolso = pesos
+        print("Bolso atualizado, melhor acuracia: {}".format(bolsoAccuracy))
+
+def acuracia():
+    aux = 0.0
+    for i in range(0, len(Xf)):
         atualX = Xf[i].reshape(-1, Xf.shape[1])
         atualY = Yf[i]
-        wTx = np.dot(atualX, pesos)[0][0]
+        wTx = predicao(atualX, pesos)
+        if (atualY == 1 and wTx > 0) or (atualY == -1 and wTx < 0):
+            aux += 1
+    return aux/len(Xf)
+
+for iteracao in range(100):
+    erroClassificacao = 0
+    #for i in range(0, len(Xf)):  #tamanho da minha base de dados, 0 a 434
+    #stocastico
+    batch_size = 20
+    a = []
+    for i in range(batch_size):
+        a.append(np.random.choice(range(0, len(Xf))))
+
+    for i in a:
+        atualX = Xf[i].reshape(-1, Xf.shape[1])
+        atualY = Yf[i]
+        wTx = predicao(atualX, pesos)
+
+        ## atualizando pesos --
         if atualY == 1 and wTx < 0:
-            erroClassificacao += 1
-            pesos = pesos + learningRate * np.transpose(atualX)
+            pesos = pesos+learningRate * np.transpose(atualX)
         elif atualY == -1 and wTx > 0:
-            erroClassificacao += 1
-            pesos = pesos - learningRate * np.transpose(atualX)
+            pesos = pesos-learningRate * np.transpose(atualX)
+        ## --
+        erroClassificacao = erroClassificacao + calcular_erro(atualY, wTx)
+
+    acc = acuracia()
+    atualizar_bolso(acc)
+    #print("acut", acc)
+
+    #print("Erro Classificacao", erroClassificacao)
     plotData.append(erroClassificacao)
     if erroClassificacao<minErroClassificacao:
         minErroClassificacao = erroClassificacao
-    # if iteration%1==0:
-    #print("Interacao {}, ErroClassificacao {}".format(interacao, erroClassificacao))
 
-print ("Erro de Classificacao minimo : ",minErroClassificacao)
-print("Pesos no bolso", pesos.transpose())
-
-#acuracia = ((Xf.shape[0]-minErroClassificacao)/Xf.shape[0])*100
-acuracia = Xf.shape[0]-minErroClassificacao
-print("acuracia", acuracia)
-print("tamanho", Xf.shape[0])
-acur = (acuracia*100/Xf.shape[0]*100)
-acur = acur/100
-print ("Acuracia do Algoritmo do bolso:", float(acur),"%")
-#print("Numero de Erro de Classificacao: ", erroClassificacao)
+print("Acuraria do bolso: ", bolsoAccuracy)
+print("Pesos do bolso:", bolso)
 plt.plot(np.arange(0, 100),plotData)
 plt.xlabel("Numero de interacoes")
 plt.ylabel("Numero de Erro de classificacao")
-#plt.show()
+plt.show()
